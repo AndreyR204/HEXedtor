@@ -1,1 +1,1 @@
-# HEXedtor
+# HEXeditor
