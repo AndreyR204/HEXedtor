@@ -1,4 +1,3 @@
-import sys
 import curses
 
 
@@ -51,7 +50,7 @@ def rep_data(data, byte_count):
 
 
 class bin_editor(object):
-    def __init__(self):
+    def __init__(self, filepath):
         self.cursor_index = 0
         self.window_y_offset = 0
         self.byte_count = 1
@@ -60,6 +59,7 @@ class bin_editor(object):
         self.little_endian = False
         self.show_guide_lines = True
         self.insert_mode = False
+        self.filepath = filepath
 
         self.byte_colors = [0 for i in range(256)]
         for c in range(0x20, 0x7f):
@@ -195,10 +195,8 @@ class bin_editor(object):
         curses.init_pair(3, curses.COLOR_WHITE, curses.COLOR_RED)
         curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_WHITE)
 
-        if len(sys.argv) > 1:
-            self.filepath = sys.argv[1]
-            self.load_data(self.filepath)
-            self.print_info('read file: ' + self.filepath)
+        self.load_data(self.filepath)
+        self.print_info('read file: ' + self.filepath)
 
         self.redraw()
         # self.display_bytes()
@@ -274,7 +272,7 @@ class bin_editor(object):
                 else:
                     self.print_info('not in insert mode!')
 
-            elif len(k) == 1 and ((k >= '0' and k <= '9') or (k >= 'a' and k <= 'f')):
+            elif len(k) == 1 and (('0' <= k <= '9') or ('a' <= k <= 'f')):
                 if self.insert_mode and self.cursor_index % (self.byte_count * 2) == 0:
                     self.insert_byte(self.cursor_index)
                     self.redraw()
@@ -314,12 +312,4 @@ class bin_editor(object):
 
             self.screen.refresh()
             k = self.screen.getkey()
-
-
-bedit = bin_editor()
-curses.wrapper(bedit.main)
-
-if __name__ == '__main__':
-    bedit = bin_editor()
-    curses.wrapper(bedit.main)
 
