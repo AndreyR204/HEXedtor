@@ -2,7 +2,6 @@ import curses
 
 
 def read_file(filepath):
-    text = None
     with open(filepath, 'rb') as f:
         text = bytes(f.read())
     return text
@@ -17,12 +16,10 @@ def read_data(filepath):
     text = read_file(filepath)
 
     data = [ord(chr(c)) for c in text]
-    # data = [ join_bytes(data[n:n+byte_count], byte_count, little_endian) for n in range(0, len(data), byte_count) ]
     return data
 
 
 def write_data(filepath, data):
-    # data = sum([ split_bytes(n, byte_count, little_endian) for n in data ], [])
     write_file(filepath, ''.join([chr(c) for c in data]))
 
 
@@ -49,7 +46,7 @@ def rep_data(data, byte_count):
     return ('%0' + str(byte_count * 2) + 'X') % data
 
 
-class bin_editor(object):
+class BinEditor(object):
     def __init__(self, filepath):
         self.cursor_index = 0
         self.window_y_offset = 0
@@ -69,8 +66,6 @@ class bin_editor(object):
         self.byte_color_mods = [0 for i in range(256)]
         for c in range(0x20, 0x7f):
             self.byte_color_mods[c] = curses.A_BOLD
-
-    # self.byte_color_ranges = [ 0 for _ in range(0, 0x20) ] + [ 1 for _ in range(0x20, 0x7f) ] + [ 0 for _ in range(0x7f, 0x100) ]
 
     def display_byte(self, index):
         index_y = index / self.width - self.window_y_offset
@@ -117,7 +112,7 @@ class bin_editor(object):
         self.screen.addstr(int(cursor_y), int(cursor_x + cursor_offset + 10), '')
 
     def rep_text_byte(self, c):
-        if c >= 0x20 and c < 0x7e:
+        if 0x20 <= c < 0x7e:
             return chr(c)
         else:
             return '.'
@@ -175,8 +170,6 @@ class bin_editor(object):
         self.display_bytes()
         self.display_text()
 
-    # self.display_cursor()
-
     def store_data(self, filepath):
         write_data(filepath, self.data)
 
@@ -199,7 +192,6 @@ class bin_editor(object):
         self.print_info('read file: ' + self.filepath)
 
         self.redraw()
-        # self.display_bytes()
         self.display_cursor()
 
         self.screen.refresh()
