@@ -1,51 +1,6 @@
 import curses
 
 
-def read_file(filepath):
-    with open(filepath, 'rb') as f:
-        text = bytes(f.read())
-    return text
-
-
-def write_file(filepath, text):
-    with open(filepath, 'wb') as f:
-        f.write(text)
-
-
-def read_data(filepath):
-    text = read_file(filepath)
-
-    data = [ord(chr(c)) for c in text]
-    return data
-
-
-def write_data(filepath, data):
-    write_file(filepath, ''.join([chr(c) for c in data]))
-
-
-def join_bytes(data, byte_count, little_endian=True):
-    while len(data) < byte_count:
-        data.append(0)
-    if little_endian:
-        return sum([data[i] << 8 * i for i in range(0, byte_count)])
-    else:
-        result = 0
-        for i in range(0, byte_count):
-            result = (result << 8) | data[i]
-        return result
-
-
-def split_bytes(data, byte_count, little_endian=True):
-    if little_endian:
-        return [(data >> i * 8) & 0xff for i in range(0, byte_count)]
-    else:
-        return [(data >> i * 8) & 0xff for i in range(byte_count - 1, -1, -1)]
-
-
-def rep_data(data, byte_count):
-    return ('%0' + str(byte_count * 2) + 'X') % data
-
-
 class BinEditor(object):
     def __init__(self, filepath):
         self.cursor_index = 0
@@ -54,18 +9,8 @@ class BinEditor(object):
         self.max_byte_count = 32
         self.width = 64
         self.little_endian = False
-        self.show_guide_lines = True
         self.insert_mode = False
         self.filepath = filepath
-
-        self.byte_colors = [0 for i in range(256)]
-        for c in range(0x20, 0x7f):
-            self.byte_colors[c] = 1
-        for c in range(0x80, 0x100):
-            self.byte_colors[c] = 3
-        self.byte_color_mods = [0 for i in range(256)]
-        for c in range(0x20, 0x7f):
-            self.byte_color_mods[c] = curses.A_BOLD
 
     def display_byte(self, index):
         index_y = index / self.width - self.window_y_offset
@@ -76,32 +21,21 @@ class BinEditor(object):
             offset_x += (self.byte_count - index_x % self.byte_count - 1) * 2
         else:
             offset_x += index_x % self.byte_count * 2
-        self.screen.addstr(int(index_y), int(offset_x + 10), '%02X' % self.data[index],
-                           self.byte_color_mods[self.data[index]] | curses.color_pair(
-                               self.byte_colors[self.data[index]]))
+        self.screen.addstr(int(index_y), int(offset_x + 10), '%02X' % self.data[int(index)],
+                           self.data[int(index)])
 
     def display_bytes(self):
         offset = self.window_y_offset * self.width
         for i in range(int(offset), int(min(len(self.data), offset + (self.max_y - 1) * self.width))):
             self.display_byte(i)
 
-    def display_guide_lines(self):
-        for y in range(0, int(min(self.max_y - 1, len(self.data) / self.width - self.window_y_offset + 1))):
-            for byte_offset in range(0, int(self.width), int(4 * self.byte_count)):
-                offset_x = byte_offset / self.byte_count * (self.byte_count * 2 + 1)
-                offset_x += byte_offset % self.byte_count * 2
-                self.screen.addstr(y, int(offset_x + 9), '|')
-
-    def display_address(self, address, index_y):
-        if address % 0x100 == 0:
-            self.screen.addstr(int(index_y), 0, '%08X:' % address, curses.color_pair(4))
-        else:
-            self.screen.addstr(int(index_y), 0, '%08X:' % address)
-
     def display_addresses(self):
         for i in range(int(self.window_y_offset),
                        int(min(len(self.data) / self.width + 1, self.window_y_offset + self.max_y - 1))):
-            self.display_address(i * self.width, i - self.window_y_offset)
+            if (i * self.width) % 0x100 == 0:
+                self.screen.addstr(int(i - self.window_y_offset), 0, '%08X:' % (i * self.width), curses.color_pair(4))
+            else:
+                self.screen.addstr(int(i - self.window_y_offset), 0, '%08X:' % (i * self.width))
 
     def display_cursor(self):
         cursor_y = self.cursor_index / 2 / self.width
@@ -122,7 +56,7 @@ class BinEditor(object):
         offset_x = self.width * 2 + self.width / self.byte_count + 10
 
         text = ''.join(
-            [self.rep_text_byte(self.data[i]) for i in range(index, min(index + self.width, len(self.data)))])
+            [self.rep_text_byte(self.data[i]) for i in range(int(index), min(index + self.width, len(self.data)))])
         self.screen.addstr(int(index_y), int(offset_x), text)
 
     def display_text(self):
@@ -130,17 +64,17 @@ class BinEditor(object):
         for i in range(int(offset), int(min(len(self.data), offset + (self.max_y - 1) * self.width)), self.width):
             self.display_text_line(i)
 
-    def insert_byte(self, index):
-        data_index = index / 2
-        for i in range(0, self.byte_count):
-            self.data.insert(data_index, 0)
-
-    def delete_byte(self, index):
-        data_index = index / 2 / self.byte_count * self.byte_count
-        data_index -= self.byte_count
-        if data_index >= 0:
+    def edit_byte(self, index, mode):
+        if mode == "del":
+            data_index = index / 2 / self.byte_count * self.byte_count
+            data_index -= self.byte_count
+            if data_index >= 0:
+                for i in range(0, self.byte_count):
+                    del self.data[int(data_index)]
+        elif mode == "ins":
+            data_index = index / 2
             for i in range(0, self.byte_count):
-                del self.data[data_index]
+                self.data.insert(int(data_index), 0)
 
     def edit_byte_piece(self, index, key):
         shift = (1 - index % 2) * 4
@@ -148,8 +82,8 @@ class BinEditor(object):
         if self.little_endian:
             offset = self.byte_count - data_index % self.byte_count - 1
             data_index = offset + data_index / self.byte_count * self.byte_count
-        self.data[data_index] = (int(key, 16) << shift) | (
-                    self.data[data_index] ^ (self.data[data_index] & (0xf << shift)))
+        self.data[int(data_index)] = (int(key, 16) << shift) | (
+                    self.data[int(data_index)] ^ (self.data[int(data_index)] & (0xf << shift)))
 
     def print_info(self, msg):
         self.screen.addstr(self.max_y - 1, 1, ' ' * 40)
@@ -165,15 +99,13 @@ class BinEditor(object):
     def redraw(self):
         self.screen.clear()
         self.display_addresses()
-        if self.show_guide_lines:
-            self.display_guide_lines()
         self.display_bytes()
         self.display_text()
 
-    def store_data(self, filepath):
+    def store(self, filepath):
         write_data(filepath, self.data)
 
-    def load_data(self, filepath):
+    def load(self, filepath):
         self.data = read_data(filepath)
 
     def main(self, screen):
@@ -183,12 +115,8 @@ class BinEditor(object):
         self.adjust_width_to_screen()
 
         self.screen.clear()
-        curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
-        curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
-        curses.init_pair(3, curses.COLOR_WHITE, curses.COLOR_RED)
-        curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_WHITE)
 
-        self.load_data(self.filepath)
+        self.load(self.filepath)
         self.print_info('read file: ' + self.filepath)
 
         self.redraw()
@@ -251,14 +179,9 @@ class BinEditor(object):
                 self.insert_mode = not self.insert_mode
                 self.print_info('insert_mode = {}'.format(self.insert_mode))
 
-            elif k == 'l':
-                self.show_guide_lines = not self.show_guide_lines
-                self.redraw()
-                self.print_info('show_guide_lines = {}'.format(self.show_guide_lines))
-
-            elif k == '\x7f':
+            elif k == 'KEY_DC':
                 if self.insert_mode:
-                    self.delete_byte(self.cursor_index)
+                    self.edit_byte(self.cursor_index, "del")
                     self.redraw()
                     self.cursor_index -= self.byte_count * 2
                 else:
@@ -266,7 +189,7 @@ class BinEditor(object):
 
             elif len(k) == 1 and (('0' <= k <= '9') or ('a' <= k <= 'f')):
                 if self.insert_mode and self.cursor_index % (self.byte_count * 2) == 0:
-                    self.insert_byte(self.cursor_index)
+                    self.edit_byte(self.cursor_index, "ins")
                     self.redraw()
                 self.edit_byte_piece(self.cursor_index, k)
                 byte_index = self.cursor_index / 2
@@ -278,7 +201,7 @@ class BinEditor(object):
                 self.cursor_index += 1
 
             elif k == 'W':
-                self.store_data(self.filepath)
+                self.store(self.filepath)
                 self.print_info('wrote file: ' + self.filepath)
             else:
                 self.print_info('unknown command "{}"'.format(k))
@@ -304,4 +227,49 @@ class BinEditor(object):
 
             self.screen.refresh()
             k = self.screen.getkey()
+
+
+def read_file(filepath):
+    with open(filepath, 'rb') as f:
+        text = bytes(f.read())
+    return text
+
+
+def write_file(filepath, text):
+    with open(filepath, 'wb') as f:
+        f.write(text)
+
+
+def read_data(filepath):
+    text = read_file(filepath)
+
+    data = [ord(chr(c)) for c in text]
+    return data
+
+
+def write_data(filepath, data):
+    write_file(filepath, ''.join([chr(c) for c in data]))
+
+
+def join_bytes(data, byte_count, little_endian=True):
+    while len(data) < byte_count:
+        data.append(0)
+    if little_endian:
+        return sum([data[i] << 8 * i for i in range(0, byte_count)])
+    else:
+        result = 0
+        for i in range(0, byte_count):
+            result = (result << 8) | data[i]
+        return result
+
+
+def split_bytes(data, byte_count, little_endian=True):
+    if little_endian:
+        return [(data >> i * 8) & 0xff for i in range(0, byte_count)]
+    else:
+        return [(data >> i * 8) & 0xff for i in range(byte_count - 1, -1, -1)]
+
+
+def rep_data(data, byte_count):
+    return ('%0' + str(byte_count * 2) + 'X') % data
 
