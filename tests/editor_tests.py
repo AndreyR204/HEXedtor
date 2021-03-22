@@ -6,9 +6,9 @@ from hex import editor
 class TestStringMethods(unittest.TestCase):
 
     def test_filepath(self):
-        bedit = editor.BinEditor("hex/__main__.py")
+        bedit = editor.BinEditor("../hex/__main__.py")
         curses.wrapper(bedit.main)
-        self.assertEqual(bedit.filepath, 'C:\\Users\\Andrey\\PycharmProjects\\HEX\\hex\\__main__.py')
+        self.assertEqual(bedit.filepath, "../hex/__main__.py")
 
     def test_max_byte(self):
         bedit = editor.BinEditor("../hex/__main__.py")

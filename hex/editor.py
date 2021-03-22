@@ -269,7 +269,3 @@ def split_bytes(data, byte_count, little_endian=True):
     else:
         return [(data >> i * 8) & 0xff for i in range(byte_count - 1, -1, -1)]
 
-
-def rep_data(data, byte_count):
-    return ('%0' + str(byte_count * 2) + 'X') % data
-
