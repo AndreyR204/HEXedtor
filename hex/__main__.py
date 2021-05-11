@@ -1,10 +1,1 @@
-import editor
-import curses
-import argparse
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--file', '-f', help='path to file', required=True)
-    args = parser.parse_args()
-    bedit = editor.BinEditor(args.file)
-    curses.wrapper(bedit.main)
+import editorimport cursesimport argparseif __name__ == '__main__':    parser = argparse.ArgumentParser()    parser.add_argument('--file', '-f', help='path to file', required=True)    parser.add_argument('--new', '-n', help='create new file', action='store_true')    args = parser.parse_args()    if args.new:        file = open(args.file, "wb")        file.close()    bedit = editor.BinEditor(args.file)    curses.wrapper(bedit.main)

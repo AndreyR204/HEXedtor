@@ -1,4 +1,7 @@
 import curses
+from undo import Undo
+
+from hex import text_editor
 
 
 class BinEditor(object):
@@ -56,7 +59,7 @@ class BinEditor(object):
         offset_x = self.width * 2 + self.width / self.byte_count + 10
 
         text = ''.join(
-            [self.rep_text_byte(self.data[i]) for i in range(int(index), min(index + self.width, len(self.data)))])
+            [self.rep_text_byte(self.data[i]) for i in range(int(index), int(min(index + self.width, len(self.data))))])
         self.screen.addstr(int(index_y), int(offset_x), text)
 
     def display_text(self):
@@ -109,6 +112,7 @@ class BinEditor(object):
         self.data = read_data(filepath)
 
     def main(self, screen):
+        myUndo = Undo()
         self.screen = screen
         self.max_y, self.max_x = self.screen.getmaxyx()
 
@@ -181,7 +185,7 @@ class BinEditor(object):
 
             elif k == 'KEY_DC':
                 if self.insert_mode:
-                    self.edit_byte(self.cursor_index, "del")
+                    myUndo(self.edit_byte, [self.cursor_index, "del"], [self.cursor_index, "ins"], '', self.edit_byte)
                     self.redraw()
                     self.cursor_index -= self.byte_count * 2
                 else:
@@ -200,6 +204,15 @@ class BinEditor(object):
                 self.display_text_line(byte_index / self.width * self.width)
                 self.cursor_index += 1
 
+            elif k == 'Z':
+                myUndo.undo()
+            elif k == 'Y':
+                myUndo.redo()
+            elif k == '\x1b':
+                self.store(self.filepath)
+                tedit = text_editor.TextEditor(self.filepath)
+                curses.wrapper(tedit.main)
+                exit()
             elif k == 'W':
                 self.store(self.filepath)
                 self.print_info('wrote file: ' + self.filepath)
@@ -236,7 +249,7 @@ def read_file(filepath):
 
 
 def write_file(filepath, text):
-    with open(filepath, 'wb') as f:
+    with open(filepath, 'w') as f:
         f.write(text)
 
 
@@ -268,4 +281,3 @@ def split_bytes(data, byte_count, little_endian=True):
         return [(data >> i * 8) & 0xff for i in range(0, byte_count)]
     else:
         return [(data >> i * 8) & 0xff for i in range(byte_count - 1, -1, -1)]
-
