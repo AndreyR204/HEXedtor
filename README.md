@@ -19,3 +19,4 @@ python -m hex -f "path/to/file"
     p - toggle little endian
     i - toggle insert mode
     DEL - delete previous byte/word
+    ESC - switch to text mode
