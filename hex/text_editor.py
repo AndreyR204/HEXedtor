@@ -60,8 +60,8 @@ class TextEditor:
                                                                                                     clampx():], clampx() + (
                                   3 - x % 3 if key == 9 else 1)
             elif key == 27:
+                with open(self.filename, "w") as file:
+                    file.writelines(lines)
                 bedit = editor.BinEditor(self.filename)
                 curses.wrapper(bedit.main)
-                with open(sys.argv[1], "w") as file:
-                    file.writelines(lines)
                 exit()

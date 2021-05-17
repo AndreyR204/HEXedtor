@@ -1,4 +1,5 @@
 import curses
+
 from undo import Undo
 
 from hex import text_editor
@@ -208,6 +209,20 @@ class BinEditor(object):
                 myUndo.undo()
             elif k == 'Y':
                 myUndo.redo()
+            elif k == 'F':
+                self.screen.clear()
+                self.print_info("Search: ")
+                k = self.screen.getkey()
+                bits = ''
+                while k != "\n":
+                    bits += k
+                    info = "Search: {0}".format(bits)
+                    self.print_info(info)
+                    k = self.screen.getkey()
+                s = read_to_bits(self.filepath)
+                found = s.find(bits)
+                self.redraw()
+                self.print_info("Found start code at position number {0}.".format(int(found / 2 + 1)))
             elif k == '\x1b':
                 self.store(self.filepath)
                 tedit = text_editor.TextEditor(self.filepath)
@@ -258,6 +273,14 @@ def read_data(filepath):
 
     data = [ord(chr(c)) for c in text]
     return data
+
+
+def read_to_bits(filepath):
+    data = read_data(filepath)
+    bits = ''
+    for bit in data:
+        bits += format(bit, '02x')
+    return bits
 
 
 def write_data(filepath, data):
