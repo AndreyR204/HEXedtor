@@ -10,9 +10,9 @@ class Undo:
     def undo(self):
         index = self.index
         self.index -= 1
-        return self.stack[index]
+        return self.stack[self.index]
 
     def redo(self):
         index = self.index
         self.index += 1
-        return self.stack[index]
+        return self.stack[self.index]

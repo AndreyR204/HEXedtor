@@ -18,16 +18,19 @@ class BinEditor(object):
         self.undo = Undo()
 
     def display_byte(self, index):
-        index_y = index / self.width - self.window_y_offset
-        index_x = index % self.width
+        try:
+            index_y = index / self.width - self.window_y_offset
+            index_x = index % self.width
 
-        offset_x = index_x / self.byte_count * (self.byte_count * 2 + 1)
-        if self.little_endian:
-            offset_x += (self.byte_count - index_x % self.byte_count - 1) * 2
-        else:
-            offset_x += index_x % self.byte_count * 2
-        self.screen.addstr(int(index_y), int(offset_x + 10), '%02X' % self.data[int(index)],
-                           self.data[int(index)])
+            offset_x = index_x / self.byte_count * (self.byte_count * 2 + 1)
+            if self.little_endian:
+                offset_x += (self.byte_count - index_x % self.byte_count - 1) * 2
+            else:
+                offset_x += index_x % self.byte_count * 2
+            self.screen.addstr(int(index_y), int(offset_x + 10), '%02X' % self.data[int(index)],
+                               self.data[int(index)])
+        except IndexError:
+            self.print_info('not in insert mode!')
 
     def display_bytes(self):
         offset = self.window_y_offset * self.width
@@ -80,15 +83,19 @@ class BinEditor(object):
             data_index = index / 2
             for i in range(0, self.byte_count):
                 self.data.insert(int(data_index), 0)
+        self.undo.record_action(self.data)
 
     def edit_byte_piece(self, index, key):
-        shift = (1 - index % 2) * 4
-        data_index = index / 2
-        if self.little_endian:
-            offset = self.byte_count - data_index % self.byte_count - 1
-            data_index = offset + data_index / self.byte_count * self.byte_count
-        self.data[int(data_index)] = (int(key, 16) << shift) | (
-                    self.data[int(data_index)] ^ (self.data[int(data_index)] & (0xf << shift)))
+        try:
+            shift = (1 - index % 2) * 4
+            data_index = index / 2
+            if self.little_endian:
+                offset = self.byte_count - data_index % self.byte_count - 1
+                data_index = offset + data_index / self.byte_count * self.byte_count
+            self.data[int(data_index)] = (int(key, 16) << shift) | (
+                        self.data[int(data_index)] ^ (self.data[int(data_index)] & (0xf << shift)))
+        except IndexError:
+            self.print_info('not in insert mode!')
 
     def print_info(self, msg):
         self.screen.addstr(self.max_y - 1, 1, ' ' * 40)
@@ -190,7 +197,6 @@ class BinEditor(object):
                     self.edit_byte(self.cursor_index, "del")
                     self.redraw()
                     self.cursor_index -= self.byte_count * 2
-                    self.undo.record_action(self.data)
                 else:
                     self.print_info('not in insert mode!')
 
@@ -206,7 +212,6 @@ class BinEditor(object):
                 self.display_byte(byte_index)
                 self.display_text_line(byte_index / self.width * self.width)
                 self.cursor_index += 1
-                self.undo.record_action(self.data)
 
             elif k == 'Z':
                 self.data = self.undo.undo()
@@ -227,7 +232,10 @@ class BinEditor(object):
                 s = read_to_bits(self.filepath)
                 found = s.find(bits)
                 self.redraw()
-                self.print_info("Found start code at position number {0}.".format(int(found / 2 + 1)))
+                if found != -1:
+                    self.print_info("Found start code at position number {0}.".format(int(found / 2 + 1)))
+                else:
+                    self.print_info("Not found!")
             elif k == '\x1b':
                 self.store(self.filepath)
                 tedit = text_editor.TextEditor(self.filepath)
@@ -269,8 +277,8 @@ def read_file(filepath):
 
 
 def write_file(filepath, text):
-    with open(filepath, 'w') as f:
-        f.write(text)
+    with open(filepath, 'wb') as f:
+        f.write(bytes(text, encoding='cp1252'))
 
 
 def read_data(filepath):
