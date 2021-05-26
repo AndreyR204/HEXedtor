@@ -1,6 +1,6 @@
 import curses
 
-from undo import Undo
+from hex.undo import Undo
 
 from hex import text_editor
 
@@ -15,6 +15,7 @@ class BinEditor(object):
         self.little_endian = False
         self.insert_mode = False
         self.filepath = filepath
+        self.undo = Undo()
 
     def display_byte(self, index):
         index_y = index / self.width - self.window_y_offset
@@ -113,7 +114,6 @@ class BinEditor(object):
         self.data = read_data(filepath)
 
     def main(self, screen):
-        myUndo = Undo()
         self.screen = screen
         self.max_y, self.max_x = self.screen.getmaxyx()
 
@@ -122,6 +122,7 @@ class BinEditor(object):
         self.screen.clear()
 
         self.load(self.filepath)
+        self.undo.record_action(read_data(self.filepath))
         self.print_info('read file: ' + self.filepath)
 
         self.redraw()
@@ -186,9 +187,10 @@ class BinEditor(object):
 
             elif k == 'KEY_DC':
                 if self.insert_mode:
-                    myUndo(self.edit_byte, [self.cursor_index, "del"], [self.cursor_index, "ins"], '', self.edit_byte)
+                    self.edit_byte(self.cursor_index, "del")
                     self.redraw()
                     self.cursor_index -= self.byte_count * 2
+                    self.undo.record_action(self.data)
                 else:
                     self.print_info('not in insert mode!')
 
@@ -204,11 +206,14 @@ class BinEditor(object):
                 self.display_byte(byte_index)
                 self.display_text_line(byte_index / self.width * self.width)
                 self.cursor_index += 1
+                self.undo.record_action(self.data)
 
             elif k == 'Z':
-                myUndo.undo()
+                self.data = self.undo.undo()
+                self.redraw()
             elif k == 'Y':
-                myUndo.redo()
+                self.data = self.undo.redo()
+                self.redraw()
             elif k == 'F':
                 self.screen.clear()
                 self.print_info("Search: ")
