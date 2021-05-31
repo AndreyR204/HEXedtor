@@ -212,7 +212,8 @@ class BinEditor(object):
                 self.display_byte(byte_index)
                 self.display_text_line(byte_index / self.width * self.width)
                 self.cursor_index += 1
-
+            elif k == '\n':
+                pass
             elif k == 'Z':
                 self.data = self.undo.undo()
                 self.redraw()
@@ -229,7 +230,7 @@ class BinEditor(object):
                     info = "Search: {0}".format(bits)
                     self.print_info(info)
                     k = self.screen.getkey()
-                s = read_to_bits(self.filepath)
+                s = read_to_bits(self.data)
                 found = s.find(bits)
                 self.redraw()
                 if found != -1:
@@ -288,8 +289,7 @@ def read_data(filepath):
     return data
 
 
-def read_to_bits(filepath):
-    data = read_data(filepath)
+def read_to_bits(data):
     bits = ''
     for bit in data:
         bits += format(bit, '02x')
