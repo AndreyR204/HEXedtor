@@ -279,7 +279,7 @@ def read_file(filepath):
 
 def write_file(filepath, text):
     with open(filepath, 'wb') as f:
-        f.write(bytes(text, encoding='cp1252'))
+        f.write(bytearray(text))
 
 
 def read_data(filepath):
@@ -297,7 +297,7 @@ def read_to_bits(data):
 
 
 def write_data(filepath, data):
-    write_file(filepath, ''.join([chr(c) for c in data]))
+    write_file(filepath, data)
 
 
 def join_bytes(data, byte_count, little_endian=True):

@@ -8,9 +8,15 @@ class Undo:
         self.index += 1
 
     def undo(self):
-        self.index -= 1
-        return self.stack[self.index]
+        try:
+            self.index -= 1
+            return self.stack[self.index]
+        except IndexError:
+            return self.stack[0]
 
     def redo(self):
-        self.index += 1
-        return self.stack[self.index]
+        try:
+            self.index += 1
+            return self.stack[self.index]
+        except IndexError:
+            return self.stack[len(self.stack)-1]
